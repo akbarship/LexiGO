@@ -3,7 +3,7 @@ from pydantic import SecretStr
 
 class Settings(BaseSettings):
     BOT_TOKEN: SecretStr
-    GROQ_API_KEY: SecretStr
+    OPENAI_API_KEY: SecretStr
     DATABASE_URL: str = "sqlite+aiosqlite:///./lexigo.db"
     ADMIN_ID: int = 7853044770
 

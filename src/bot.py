@@ -4,6 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.client.bot import DefaultBotProperties
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.enums import ParseMode
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from database import add_user, save_to_global_dict, get_cached_definition, add_to_study_list, get_user_dictionary, get_admin_stats, update_anki_progress, get_due_words, get_study_details
 from llm import get_definition
@@ -15,7 +16,128 @@ dp = Dispatcher()
 router = Router()
 dp.include_router(router)
 
+# CHECK IN
+CHANNEL_ID = "@akbarshokh_blogs"  # or use numeric ID like -1001234567890
+CHANNEL_USERNAME = "akbarshokh_blogs"  # For URL generation in keyboard
 
+async def is_subscribed(user_id: int) -> bool:
+    try:
+        member = await bot.get_chat_member(CHANNEL_ID, user_id)
+        print(f"User {user_id} status: {member.status}")  # ← add this
+        return member.status in ("member", "administrator", "creator")
+    except Exception as e:
+        print(f"Subscription check error: {e}")
+        return True 
+
+def subscribe_kb() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="📢 Join Channel", url=f"https://t.me/{CHANNEL_USERNAME.lstrip('@')}")
+    kb.button(text="✅ I Subscribed", callback_data="check_subscription")
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+
+@router.callback_query(F.data == "check_subscription")
+async def check_subscription(cb: types.CallbackQuery):
+    if await is_subscribed(cb.from_user.id):
+        await cb.message.delete()
+        await cb.message.answer(
+            "✅ <b>Thanks for subscribing!</b>\n\n"
+            "👋 Send me a word to define it, or click below to practice",
+            reply_markup=main_menu_kb(),
+            parse_mode="HTML"
+        )
+    else:
+        await cb.answer("❌ You haven't subscribed yet!", show_alert=True)
+
+# ─────────────────────────────────────────────
+#  START
+# ─────────────────────────────────────────────
+
+@router.message(CommandStart())
+async def start(msg: types.Message):
+    user_id = msg.from_user.id
+    is_new_user = await add_user(user_id)
+
+    if not await is_subscribed(user_id):
+        await msg.answer(
+            "👋 Welcome to <b>Lexi Go!</b>\n\n"
+            "📢 To use the bot, please join our channel first:",
+            reply_markup=subscribe_kb(),
+            parse_mode="HTML"
+        )
+        return
+
+    if is_new_user:
+        await msg.answer(
+            "<b>🚀 Lexi Go</b>\n"
+            "<i>Your personal vocabulary architect.</i>\n\n"
+            "🔍 <b>Instant Definitions</b>\n"
+            "Get clear, concise meanings instantly.\n\n"
+            "🧠 <b>Cue Card Memorization</b>\n"
+            "Master new words effortlessly with our smart spaced repetition system.\n\n"
+            "<i>⌨ Send any word to begin.</i>",
+            reply_markup=main_menu_kb(),
+            parse_mode="HTML"
+        )
+    else:
+        await msg.answer(
+            "👋 Send me a word to define it, or click below to practice",
+            reply_markup=main_menu_kb(),
+            parse_mode="HTML"
+        )
+
+
+# ─────────────────────────────────────────────
+#  WORD SEARCH (single handler, merged)
+# ─────────────────────────────────────────────
+
+@router.message(F.text)
+async def handle_search(msg: types.Message, state: FSMContext):
+    word = msg.text.strip().lower()
+    if word.startswith("/"):
+        return
+
+    # Subscription check
+    if not await is_subscribed(msg.from_user.id):
+        await msg.answer(
+            "📢 You need to join our channel to use this bot:",
+            reply_markup=subscribe_kb(),
+            parse_mode="HTML"
+        )
+        return
+
+    wait_msg = await msg.answer("🔍 <i>Searching...</i>", parse_mode="HTML")
+
+    data = await get_cached_definition(word)
+    if not data:
+        data = await get_definition(word)
+        if data:
+            await save_to_global_dict(data)
+
+    if not data:
+        await wait_msg.edit_text("❌ <b>Word not found.</b>", parse_mode="HTML")
+        return
+
+    await state.update_data(last_word=data['word'])
+
+    synonyms_text = data.get('synonyms', '-')
+    if isinstance(synonyms_text, list):
+        synonyms_text = ", ".join(synonyms_text)
+
+    response_text = (
+        f"🇬🇧 <b>{data['word']}</b>   <code>{data.get('level', 'N/A')}</code>\n"
+        f"⭐️ <b>Importance:</b> 10/{data.get('importance_rate', '5/10')}\n\n"
+        f"📖 <b>Definition:</b>\n"
+        f"{data['definition']}\n\n"
+        f"✍️ <b>Example:</b>\n"
+        f"<i>{data['example']}</i>\n\n"
+        f"🔊 <b>Pronunciation:</b> <code>{data.get('pronunciation', '')}</code>\n"
+        f"🔄 <b>Synonyms:</b> {synonyms_text}"
+    )
+
+    await wait_msg.edit_text(response_text, reply_markup=add_word_kb(), parse_mode="HTML")
 # ─────────────────────────────────────────────
 #  MAIN MENU
 # ─────────────────────────────────────────────
@@ -33,32 +155,6 @@ async def callback_main_menu(cb: types.CallbackQuery):
     await cb.answer()
 
 
-# ─────────────────────────────────────────────
-#  START
-# ─────────────────────────────────────────────
-
-@router.message(CommandStart())
-async def start(msg: types.Message):
-    user_id = msg.from_user.id
-    is_new_user = await add_user(user_id)
-
-    if is_new_user:
-        welcome_text = (
-            "<b>🚀 Lexi Go</b>\n"
-            "<i>Your personal vocabulary architect.</i>\n\n"
-            "🔍 <b>Instant Definitions</b>\n"
-            "Get clear, concise meanings instantly.\n\n"
-            "🧠 <b>Cue Card Memorization</b>\n"
-            "Master new words effortlessly with our smart spaced repetition system.\n\n"
-            "<i>⌨ Send any word to begin.</i>"
-        )
-        await msg.answer(welcome_text, reply_markup=main_menu_kb(), parse_mode="HTML")
-    else:
-        await msg.answer(
-            "👋 Send me a word to define it, or click below to practice",
-            reply_markup=main_menu_kb(),
-            parse_mode="HTML"
-        )
 
 # ADMIN COMMANDS
 @router.message(Command("stats"))
@@ -75,48 +171,6 @@ async def admin_stats(msg: types.Message):
         f"🧠 <b>Words Being Studied:</b> {stats['total_user_words']}",
         parse_mode="HTML"
     )
-# ─────────────────────────────────────────────
-#  WORD SEARCH
-# ─────────────────────────────────────────────
-
-@router.message(F.text)
-async def handle_search(msg: types.Message, state: FSMContext):
-    word = msg.text.strip().lower()
-    if word.startswith("/"):
-        return
-
-    wait_msg = await msg.answer("🔍 <i>Searching...</i>", parse_mode="HTML")
-
-    data = await get_cached_definition(word)
-    if not data:
-        data = await get_definition(word)
-        if data:
-            await save_to_global_dict(data)
-
-    if not data:
-        await wait_msg.edit_text("❌ <b>Word not found.</b>", parse_mode="HTML")
-        return
-
-    # Only update last_word, preserve quiz FSM state (failed_words etc.)
-    await state.update_data(last_word=data['word'])
-
-    synonyms_text = data.get('synonyms', '-')
-    if isinstance(synonyms_text, list):
-        synonyms_text = ", ".join(synonyms_text)
-
-    response_text = (
-        f"🇬🇧 <b>{data['word']}</b>   <code>{data.get('level', 'N/A')}</code>\n"
-        f"⭐️ <b>Importance:</b> {data.get('importance_rate', '5/10')}\n\n"
-        f"📖 <b>Definition:</b>\n"
-        f"{data['definition']}\n\n"
-        f"✍️ <b>Example:</b>\n"
-        f"<i>{data['example']}</i>\n\n"
-        f"🔊 <b>Pronunciation:</b> <code>{data.get('pronunciation', '')}</code>\n"
-        f"🔄 <b>Synonyms:</b> {synonyms_text}"
-    )
-
-    await wait_msg.edit_text(response_text, reply_markup=add_word_kb(), parse_mode="HTML")
-
 
 # ─────────────────────────────────────────────
 #  ADD WORD

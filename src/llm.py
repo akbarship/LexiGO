@@ -1,8 +1,8 @@
 import json
-from groq import AsyncGroq
+from openai import AsyncOpenAI
 from config import settings
 
-client = AsyncGroq(api_key=settings.GROQ_API_KEY.get_secret_value())
+client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.get_secret_value())
 
 
 async def get_definition(word: str):
@@ -35,14 +35,14 @@ async def get_definition(word: str):
     Your task:
     Given the word: "{word}", generate the JSON output following the rules above.
     """
-    
+
     try:
         resp = await client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"}
         )
         return json.loads(resp.choices[0].message.content)
     except Exception as e:
-        print(f"LLM Error: {e}") # Helpful for debugging
+        print(f"LLM Error: {e}")
         return None

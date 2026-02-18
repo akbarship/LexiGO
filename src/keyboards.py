@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+
 def main_menu_kb() -> InlineKeyboardMarkup:
     """The main start menu."""
     kb = InlineKeyboardBuilder()
@@ -51,3 +52,4 @@ def quiz_grade_kb(word_id: int) -> InlineKeyboardMarkup:
     kb.button(text="🚪 Quit Quiz", callback_data="main_menu")
     kb.adjust(3, 1)
     return kb.as_markup()
+
