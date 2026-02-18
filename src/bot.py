@@ -5,6 +5,9 @@ from aiogram.client.bot import DefaultBotProperties
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import FSInputFile
+from aiogram.filters import Command
+import os
 
 from database import add_user, save_to_global_dict, get_cached_definition, add_to_study_list, get_user_dictionary, get_admin_stats, update_anki_progress, get_due_words, get_study_details
 from llm import get_definition
@@ -104,6 +107,38 @@ async def admin_stats(msg: types.Message):
         parse_mode="HTML"
     )
 
+@router.message(Command("db"))
+async def admin_send_db(msg: types.Message):
+    print(f"Admin {msg.from_user.id} requested database export.")
+    
+    # 1. Security Check
+    if msg.from_user.id not in [settings.ADMIN_ID]:
+        return
+
+    # 2. Define the path to your database file
+    # UPDATE THIS: Change 'database.db' to your actual file path (e.g., 'data/main.db')
+    db_path = "lexigo.db" 
+
+    # 3. Check if file exists before trying to send
+    if not os.path.exists(db_path):
+        await msg.answer("❌ <b>Error:</b> Database file not found on server.", parse_mode="HTML")
+        return
+
+    await msg.answer("📤 <b>Uploading database...</b>", parse_mode="HTML")
+
+    # 4. Prepare and send the file
+    try:
+        # FSInputFile is the correct method for local files in aiogram v3
+        db_file = FSInputFile(db_path)
+        
+        await msg.answer_document(
+            document=db_file,
+            caption=f"🗄 <b>Database Backup</b>", # Optional: Timestamp
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        await msg.answer(f"❌ <b>Error sending file:</b>\n<code>{str(e)}</code>", parse_mode="HTML")
+
 # ─────────────────────────────────────────────
 #  WORD SEARCH (single handler, merged)
 # ─────────────────────────────────────────────
@@ -111,6 +146,9 @@ async def admin_stats(msg: types.Message):
 @router.message(F.text)
 async def handle_search(msg: types.Message, state: FSMContext):
     word = msg.text.strip().lower()
+    user_id = msg.from_user.id
+    await add_user(user_id)
+
     if word.startswith("/"):
         return
 

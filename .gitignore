@@ -210,3 +210,4 @@ __marimo__/
 # Database
 *.db
 *.sqlite3
+./lexigo.db
