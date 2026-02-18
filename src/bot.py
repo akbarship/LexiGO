@@ -88,6 +88,21 @@ async def start(msg: types.Message):
             parse_mode="HTML"
         )
 
+# ADMIN COMMANDS
+@router.message(Command("stats"))
+async def admin_stats(msg: types.Message):
+    print(f"Admin {msg.from_user.id} requested stats.")
+    if msg.from_user.id not in [settings.ADMIN_ID]:
+        return  
+    
+    stats = await get_admin_stats()
+    await msg.answer(
+        f"<b>📊 Admin Stats</b>\n\n"
+        f"👥 <b>Total Users:</b> {stats['total_users']}\n"
+        f"📖 <b>Global Dictionary:</b> {stats['total_dict_words']} words\n"
+        f"🧠 <b>Words Being Studied:</b> {stats['total_user_words']}",
+        parse_mode="HTML"
+    )
 
 # ─────────────────────────────────────────────
 #  WORD SEARCH (single handler, merged)
@@ -155,22 +170,6 @@ async def callback_main_menu(cb: types.CallbackQuery):
     await cb.answer()
 
 
-
-# ADMIN COMMANDS
-@router.message(Command("stats"))
-async def admin_stats(msg: types.Message):
-    print(f"Admin {msg.from_user.id} requested stats.")
-    if msg.from_user.id not in [settings.ADMIN_ID]:
-        return  
-    
-    stats = await get_admin_stats()
-    await msg.answer(
-        f"<b>📊 Admin Stats</b>\n\n"
-        f"👥 <b>Total Users:</b> {stats['total_users']}\n"
-        f"📖 <b>Global Dictionary:</b> {stats['total_dict_words']} words\n"
-        f"🧠 <b>Words Being Studied:</b> {stats['total_user_words']}",
-        parse_mode="HTML"
-    )
 
 # ─────────────────────────────────────────────
 #  ADD WORD
