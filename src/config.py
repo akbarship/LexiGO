@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     BOT_TOKEN: SecretStr
     GROQ_API_KEY: SecretStr
     DATABASE_URL: str = "sqlite+aiosqlite:///./lexigo.db"
-    ADMIN_ID: int
+    ADMIN_ID: int = 7853044770
 
     model_config = SettingsConfigDict(
         env_file=".env", 
