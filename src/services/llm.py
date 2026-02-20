@@ -13,12 +13,13 @@ async def get_definition(word: str):
     1. Provide **ONE clear meaning** of the word only.
     2. Use **simple English words** (avoid jargon).
     3. Keep definition short (≤15 words).
-    4. Provide **ONE short example sentence** showing real-world context.
-    5. Provide **pronunciation in IPA** format.
-    6. Suggest **1–2 synonyms** in simple English.
-    7. Assign a **CEFR level** (B1, B2, C1, or C2) based on difficulty.
-    8. Rate the word's importance from **0 to 10** (10 = essential/very common, above 5 = extremely rare).
-    9. Return **JSON only** with no extra text.
+    4. Include a **UZBEK meaning* and keep it short (≤8 words).
+    5. Provide **ONE short example sentence** showing real-world context.
+    6. Provide **pronunciation in IPA** format.
+    7. Suggest **1–2 synonyms** in simple English.
+    8. Assign a **CEFR level** (B1, B2, C1, or C2) based on difficulty.
+    9. Rate the word's importance from **0 to 10** (10 = essential/very common, above 5 = extremely rare).
+    10. Return **JSON only** with no extra text.
 
     Example output structure:
     {{
@@ -26,10 +27,11 @@ async def get_definition(word: str):
         "level": "B1",
         "importance_rate": 8,
         "definition": "to leave something or someone permanently",
+        "uzbek_meaning": "qoldirmoq"
         "example": "He abandoned the project after losing interest.",
         "pronunciation": "/əˈbændən/",
         "synonyms": ["leave", "give up"],
-        "hint": "Think: leave forever"
+        "hint": "Think: leave forever",
     }}
 
     Your task:

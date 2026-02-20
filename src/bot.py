@@ -10,7 +10,7 @@ from aiogram.filters import Command
 import os
 
 from database import add_user, save_to_global_dict, get_cached_definition, add_to_study_list, get_user_dictionary, get_admin_stats, update_anki_progress, get_due_words, get_study_details
-from llm import get_definition
+from services.llm import get_definition
 from config import settings
 from keyboards import main_menu_kb, add_word_kb, quiz_show_kb, quiz_grade_kb, dict_kb, dictionary_pagination_kb
 

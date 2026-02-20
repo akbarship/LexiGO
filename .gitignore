@@ -207,7 +207,3 @@ marimo/_lsp/
 __marimo__/
 
 
-# Database
-*.db
-*.sqlite3
-./lexigo.db
