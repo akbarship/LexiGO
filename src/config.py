@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     ADMIN_ID: int = 7853044770
 class Settings(BaseSettings):
     BOT_TOKEN: SecretStr
+    BACKUP_TOKEN: SecretStr
     OPENAI_API_KEY: SecretStr
     DATABASE_URL: str
     ADMIN_ID: int = 7853044770
