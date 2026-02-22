@@ -7,7 +7,11 @@ from .dictionary import (
     get_user_dictionary,
 )
 from .quiz import get_due_words, get_study_details, update_anki_progress
-from .admin import get_admin_stats
+from .admin import (
+    get_stats,
+    get_all_user_ids,
+    mark_user_inactive,
+)
 
 __all__ = [
     "init_db",
@@ -19,6 +23,8 @@ __all__ = [
     "get_due_words",
     "get_study_details",
     "update_anki_progress",
-    "get_admin_stats",
+    "get_stats",
+    "get_all_user_ids",
+    "mark_user_inactive",
     "Base",
 ]
