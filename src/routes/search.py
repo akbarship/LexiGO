@@ -34,6 +34,7 @@ async def handle_search(msg: types.Message, state: FSMContext):
     data = await get_cached_definition(word)
     if not data:
         data = await get_definition(word)
+        print(f"Fetched from API: {data}")  # Debug log
         if data:
             await save_to_global_dict(data)
 
