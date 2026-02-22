@@ -6,6 +6,11 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: SecretStr
     DATABASE_URL: str
     ADMIN_ID: int = 7853044770
+    DB_HOST="localhost"
+    DB_PORT: int
+    DB_USER: str
+    DB_PASSWORD:str
+    DB_NAME: str
 
     model_config = SettingsConfigDict(
         env_file=".env", 
