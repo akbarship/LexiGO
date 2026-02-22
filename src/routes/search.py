@@ -34,9 +34,6 @@ async def handle_search(msg: types.Message, state: FSMContext):
         if data:
             await save_to_global_dict(data)
 
-    print(data)
-
-
     if not data:
         await wait_msg.edit_text("❌ <b>Word not found.</b>", parse_mode="HTML")
         return

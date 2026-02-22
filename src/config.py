@@ -4,7 +4,7 @@ from pydantic import SecretStr
 class Settings(BaseSettings):
     BOT_TOKEN: SecretStr
     OPENAI_API_KEY: SecretStr
-    DATABASE_URL: str = "sqlite+aiosqlite:///./lexigo.db"
+    DATABASE_URL: str
     ADMIN_ID: int = 7853044770
 
     model_config = SettingsConfigDict(
