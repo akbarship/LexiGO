@@ -1,6 +1,6 @@
 import asyncio
 import sqlite3
-from .database import Base, User, Dictionary, UserWord
+from .database.models import Base, User, Dictionary, UserWord
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.dialects.mysql import insert
