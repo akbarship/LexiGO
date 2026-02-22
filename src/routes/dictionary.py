@@ -1,7 +1,7 @@
 from aiogram import Router, types, F
 
-from database import get_user_dictionary
-from keyboards import dictionary_pagination_kb
+from ..database import get_user_dictionary
+from ..keyboards import dictionary_pagination_kb
 
 router = Router()
 

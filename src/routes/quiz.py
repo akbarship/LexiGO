@@ -1,8 +1,8 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 
-from database import get_due_words, get_study_details, update_anki_progress
-from keyboards import main_menu_kb, quiz_show_kb, quiz_grade_kb
+from ..database import get_due_words, get_study_details, update_anki_progress
+from ..keyboards import main_menu_kb, quiz_show_kb, quiz_grade_kb
 
 router = Router()
 

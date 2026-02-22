@@ -1,8 +1,8 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 
-from database import get_cached_definition, add_to_study_list
-from keyboards import main_menu_kb, dict_kb
+from ..database import get_cached_definition, add_to_study_list
+from ..keyboards import main_menu_kb, dict_kb
 
 router = Router()
 

@@ -1,9 +1,9 @@
 import asyncio
 import logging
 import sys
-from core import bot, dp
-from database import init_db
-from routes import register_all_routers
+from .core import bot, dp
+from .database import init_db
+from .routes import register_all_routers
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 

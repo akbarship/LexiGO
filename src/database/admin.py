@@ -1,6 +1,6 @@
 from sqlalchemy import select, func
-from database.engine import AsyncSessionLocal
-from database.models import User, Dictionary, UserWord
+from .engine import AsyncSessionLocal
+from .models import User, Dictionary, UserWord
 
 
 async def get_admin_stats() -> dict:

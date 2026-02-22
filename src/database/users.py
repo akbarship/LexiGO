@@ -1,5 +1,5 @@
-from database.engine import AsyncSessionLocal
-from database.models import User
+from .engine import AsyncSessionLocal
+from .models import User
 
 
 async def add_user(user_id: int) -> bool:

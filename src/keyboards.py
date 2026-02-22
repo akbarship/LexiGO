@@ -16,6 +16,7 @@ def dict_kb() -> InlineKeyboardMarkup:
     kb.adjust(1)
     return kb.as_markup()
 
+
 def dictionary_pagination_kb(page: int, has_next: bool) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     
@@ -31,9 +32,17 @@ def dictionary_pagination_kb(page: int, has_next: bool) -> InlineKeyboardMarkup:
     
     return kb.as_markup()
 
-def add_word_kb() -> InlineKeyboardMarkup:
+def back_to_menu_kb() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="🏠 Main Menu", callback_data="main_menu")
+    return kb.as_markup()
+
+
+def add_word_kb(word: str) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="➕ Add to Dictionary", callback_data="add_word")
+    kb.button(text="🔊 Pronunciation", callback_data=f"play_audio:{word}")
+    kb.adjust(2)
     return kb.as_markup()
 
 def quiz_show_kb(word_id: int) -> InlineKeyboardMarkup:

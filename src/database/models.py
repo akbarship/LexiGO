@@ -1,18 +1,13 @@
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import BigInteger, Integer, String, ForeignKey, Float
 from sqlalchemy.orm import Mapped, mapped_column
-
-
-
-
-class Base(DeclarativeBase):
-    pass
+from .engine import Base
 
 
 class User(Base):
     __tablename__ = "users"
     user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-
+    active: Mapped[bool] = mapped_column(default=True)
 
 class Dictionary(Base):
     __tablename__ = "dictionary"

@@ -1,7 +1,7 @@
 import time
 from sqlalchemy import select
-from database.engine import AsyncSessionLocal
-from database.models import UserWord, Dictionary
+from .engine import AsyncSessionLocal
+from .models import UserWord, Dictionary
 
 
 async def get_due_words(user_id: int):

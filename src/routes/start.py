@@ -3,10 +3,10 @@ from aiogram import Router, types
 from aiogram.filters import CommandStart, Command
 from aiogram.types import FSInputFile
 
-from core.bot import is_subscribed, subscribe_kb
-from database import add_user, get_admin_stats
-from keyboards import main_menu_kb
-from config import settings
+from ..core.bot import is_subscribed, subscribe_kb
+from ..database import add_user, get_admin_stats
+from ..keyboards import main_menu_kb
+from ..config import settings
 
 router = Router()
 

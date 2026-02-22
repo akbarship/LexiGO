@@ -1,6 +1,6 @@
 from sqlalchemy import select
-from database.engine import AsyncSessionLocal
-from database.models import Dictionary, UserWord
+from .engine import AsyncSessionLocal
+from .models import Dictionary, UserWord
 
 
 async def save_to_global_dict(data: dict):

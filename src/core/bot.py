@@ -4,7 +4,7 @@ from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from config import settings
+from ..config import settings
 
 bot = Bot(
     token=settings.BOT_TOKEN.get_secret_value(),
