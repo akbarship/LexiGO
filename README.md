@@ -19,6 +19,28 @@ Core Flow
 5. User practices saved words inside the Telegram web app.
 6. The web app runs short SRS sessions, gives XP, updates streaks, and tracks mastery per collection.
 
+Admin Bot
+---------
+
+Open the admin panel in Telegram with:
+
+```text
+/admin
+```
+
+Bootstrap admins come from `ADMIN_IDS` in `.env`, for example:
+
+```bash
+ADMIN_IDS=123456789,987654321
+```
+
+The admin panel has four bot-only sections:
+
+- `Stat`: active/inactive users, global dictionary size, collections, due/mastered study items, admins, and channel-check status.
+- `Sending`: forward any admin message/media to active users with conservative Telegram flood-limit pacing.
+- `Admins`: add admins by name and Telegram ID, or remove database-added admins.
+- `Channels`: add/remove required channels and enable/disable subscription checking.
+
 Run Locally
 -----------
 

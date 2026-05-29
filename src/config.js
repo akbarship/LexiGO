@@ -10,16 +10,23 @@ for (const key of required) {
   }
 }
 
+function parseNumberList(value) {
+  if (!value) return [];
+  return String(value)
+    .replaceAll("[", "")
+    .replaceAll("]", "")
+    .split(",")
+    .map((id) => Number(String(id).trim()))
+    .filter(Boolean);
+}
+
 export const config = {
   botToken: process.env.BOT_TOKEN || "",
   openaiApiKey: process.env.OPENAI_API_KEY || "",
   mongodbUri: process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/lexigo",
   webappUrl: process.env.WEBAPP_URL || "http://localhost:3000",
   port: Number(process.env.PORT || 3000),
-  adminIds: (process.env.ADMIN_IDS || "")
-    .split(",")
-    .map((id) => Number(id.trim()))
-    .filter(Boolean),
+  adminIds: parseNumberList(process.env.ADMIN_IDS),
   channelId: process.env.CHANNEL_ID || "@akbarshokh_blogs",
   channelUsername: process.env.CHANNEL_USERNAME || "akbarshokh_blogs",
   botMode: process.env.BOT_MODE || "polling",

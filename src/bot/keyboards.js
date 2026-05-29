@@ -39,9 +39,17 @@ export function savedKeyboard() {
   return keyboard.row().text("🔎 Keep exploring", "keep_exploring");
 }
 
-export function subscribeKeyboard() {
-  return new InlineKeyboard()
-    .url("📢 Join channel", `https://t.me/${config.channelUsername.replace("@", "")}`)
-    .row()
-    .text("✅ I subscribed", "check_subscription");
+export function subscribeKeyboard(channels = []) {
+  const keyboard = new InlineKeyboard();
+  const items = channels.length
+    ? channels
+    : [{ name: "Channel", username: config.channelUsername }];
+
+  for (const channel of items) {
+    if (channel.username) {
+      keyboard.url(`📢 ${channel.name}`, `https://t.me/${channel.username.replace("@", "")}`).row();
+    }
+  }
+
+  return keyboard.text("✅ I subscribed", "check_subscription");
 }

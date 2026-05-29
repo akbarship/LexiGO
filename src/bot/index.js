@@ -1,8 +1,23 @@
-import { Bot } from "grammy";
+import { Bot, InlineKeyboard } from "grammy";
 import { config } from "../config.js";
 import { getOrCreateWord } from "../services/dictionary.js";
 import { addWordToCollection, collectionProgress, getCollectionIdsForWord, listCollections } from "../services/collections.js";
 import { ensureUser } from "../services/users.js";
+import {
+  addAdmin,
+  addRequiredChannel,
+  getAdminStats,
+  getBroadcastUsers,
+  getSubscriptionCheckEnabled,
+  isAdmin,
+  isBootstrapAdmin,
+  listAdmins,
+  listRequiredChannels,
+  markUserActive,
+  removeAdmin,
+  removeRequiredChannel,
+  setSubscriptionCheckEnabled
+} from "../services/admin.js";
 import {
   collectionsKeyboard,
   mainMenuKeyboard,
@@ -14,12 +29,23 @@ import {
 export function createBot() {
   const bot = new Bot(config.botToken);
   const menuMessages = new Map();
+  const adminStates = new Map();
+  const broadcastDrafts = new Map();
+
+  bot.command("admin", async (ctx) => {
+    if (!(await guardAdmin(ctx))) return;
+    await ctx.reply("🛠 <b>LexiGO admin</b>\n\nChoose what you want to manage:", {
+      parse_mode: "HTML",
+      reply_markup: adminPanelKeyboard()
+    });
+  });
 
   bot.command("start", async (ctx) => {
     const user = await ensureUser(ctx.from);
-    if (!(await isSubscribed(ctx))) {
-      await ctx.reply("👋 Welcome to LexiGO.\n\n📢 Join our channel first to use the bot:", {
-        reply_markup: subscribeKeyboard()
+    const missingChannels = await getMissingRequiredChannels(ctx);
+    if (missingChannels.length) {
+      await ctx.reply("👋 Welcome to LexiGO.\n\n📢 Join these channels first to use the bot:", {
+        reply_markup: subscribeKeyboard(missingChannels)
       });
       return;
     }
@@ -33,7 +59,8 @@ export function createBot() {
   });
 
   bot.callbackQuery("check_subscription", async (ctx) => {
-    if (await isSubscribed(ctx)) {
+    const missingChannels = await getMissingRequiredChannels(ctx);
+    if (!missingChannels.length) {
       await ensureUser(ctx.from);
       await ctx.editMessageText("✅ Thanks! Send any English word to begin ✍️", {
         reply_markup: mainMenuKeyboard()
@@ -41,6 +68,132 @@ export function createBot() {
     } else {
       await ctx.answerCallbackQuery({ text: "❌ You have not subscribed yet.", show_alert: true });
     }
+  });
+
+  bot.callbackQuery("admin:panel", async (ctx) => {
+    if (!(await guardAdmin(ctx))) return;
+    await ctx.answerCallbackQuery();
+    await ctx.editMessageText("🛠 <b>LexiGO admin</b>\n\nChoose what you want to manage:", {
+      parse_mode: "HTML",
+      reply_markup: adminPanelKeyboard()
+    });
+  });
+
+  bot.callbackQuery("admin:stats", async (ctx) => {
+    if (!(await guardAdmin(ctx))) return;
+    await ctx.answerCallbackQuery();
+    await ctx.editMessageText(await formatAdminStats(), {
+      parse_mode: "HTML",
+      reply_markup: adminBackKeyboard()
+    });
+  });
+
+  bot.callbackQuery("admin:sending", async (ctx) => {
+    if (!(await guardAdmin(ctx))) return;
+    adminStates.set(ctx.from.id, { type: "broadcast_wait_content" });
+    await ctx.answerCallbackQuery();
+    await ctx.editMessageText(
+      "📣 <b>Broadcast</b>\n\nSend me the message/media you want to forward to all active users.\n\nI will show a confirmation before sending.",
+      {
+        parse_mode: "HTML",
+        reply_markup: adminCancelKeyboard()
+      }
+    );
+  });
+
+  bot.callbackQuery(/^admin:broadcast:(confirm|cancel)$/, async (ctx) => {
+    if (!(await guardAdmin(ctx))) return;
+    const action = ctx.match[1];
+    const draft = broadcastDrafts.get(ctx.from.id);
+
+    if (action === "cancel") {
+      broadcastDrafts.delete(ctx.from.id);
+      adminStates.delete(ctx.from.id);
+      await ctx.answerCallbackQuery({ text: "Broadcast cancelled." });
+      await ctx.editMessageText("🛠 <b>LexiGO admin</b>\n\nChoose what you want to manage:", {
+        parse_mode: "HTML",
+        reply_markup: adminPanelKeyboard()
+      });
+      return;
+    }
+
+    if (!draft) {
+      await ctx.answerCallbackQuery({ text: "No broadcast draft found.", show_alert: true });
+      return;
+    }
+
+    broadcastDrafts.delete(ctx.from.id);
+    adminStates.delete(ctx.from.id);
+    await ctx.answerCallbackQuery();
+    const statusMessageId = ctx.callbackQuery.message.message_id;
+    await ctx.editMessageText("📣 Broadcast started...\n\nSent: 0\nFailed: 0\nBlocked: 0");
+    await runBroadcast(ctx, draft, statusMessageId);
+  });
+
+  bot.callbackQuery("admin:admins", async (ctx) => {
+    if (!(await guardAdmin(ctx))) return;
+    await ctx.answerCallbackQuery();
+    await showAdminsPanel(ctx);
+  });
+
+  bot.callbackQuery("admin:add_admin", async (ctx) => {
+    if (!(await guardAdmin(ctx))) return;
+    adminStates.set(ctx.from.id, { type: "admin_add_name" });
+    await ctx.answerCallbackQuery();
+    await ctx.editMessageText("👤 Send the admin name.", {
+      reply_markup: adminCancelKeyboard()
+    });
+  });
+
+  bot.callbackQuery(/^admin:remove_admin:(\d+)$/, async (ctx) => {
+    if (!(await guardAdmin(ctx))) return;
+    const telegramId = Number(ctx.match[1]);
+    const result = await removeAdmin(telegramId);
+    await ctx.answerCallbackQuery({
+      text: result.reason === "bootstrap" ? "This admin comes from .env and cannot be removed here." : "Admin removed."
+    });
+    await showAdminsPanel(ctx);
+  });
+
+  bot.callbackQuery("admin:channels", async (ctx) => {
+    if (!(await guardAdmin(ctx))) return;
+    await ctx.answerCallbackQuery();
+    await showChannelsPanel(ctx);
+  });
+
+  bot.callbackQuery("admin:add_channel", async (ctx) => {
+    if (!(await guardAdmin(ctx))) return;
+    adminStates.set(ctx.from.id, { type: "channel_add_name" });
+    await ctx.answerCallbackQuery();
+    await ctx.editMessageText("📢 Send the channel display name.", {
+      reply_markup: adminCancelKeyboard()
+    });
+  });
+
+  bot.callbackQuery(/^admin:remove_channel:(.+)$/, async (ctx) => {
+    if (!(await guardAdmin(ctx))) return;
+    await removeRequiredChannel(ctx.match[1]);
+    await ctx.answerCallbackQuery({ text: "Channel removed." });
+    await showChannelsPanel(ctx);
+  });
+
+  bot.callbackQuery("admin:toggle_channels", async (ctx) => {
+    if (!(await guardAdmin(ctx))) return;
+    const enabled = await getSubscriptionCheckEnabled();
+    await setSubscriptionCheckEnabled(!enabled);
+    await ctx.answerCallbackQuery({ text: !enabled ? "Subscription check enabled." : "Subscription check disabled." });
+    await showChannelsPanel(ctx);
+  });
+
+  bot.callbackQuery("admin:cancel", async (ctx) => {
+    if (!(await guardAdmin(ctx))) return;
+    adminStates.delete(ctx.from.id);
+    broadcastDrafts.delete(ctx.from.id);
+    await ctx.answerCallbackQuery({ text: "Cancelled." });
+    await ctx.editMessageText("🛠 <b>LexiGO admin</b>\n\nChoose what you want to manage:", {
+      parse_mode: "HTML",
+      reply_markup: adminPanelKeyboard()
+    });
   });
 
   bot.callbackQuery("groups", async (ctx) => {
@@ -87,13 +240,19 @@ export function createBot() {
     await ctx.answerCallbackQuery();
   });
 
+  bot.on("message", async (ctx, next) => {
+    if (await handleAdminState(ctx, adminStates, broadcastDrafts)) return;
+    return next();
+  });
+
   bot.on("message:text", async (ctx) => {
     const text = ctx.message.text.trim();
     if (text.startsWith("/")) return;
 
     await ensureUser(ctx.from);
-    if (!(await isSubscribed(ctx))) {
-      await ctx.reply("📢 Join our channel to use LexiGO:", { reply_markup: subscribeKeyboard() });
+    const missingChannels = await getMissingRequiredChannels(ctx);
+    if (missingChannels.length) {
+      await ctx.reply("📢 Join these channels to use LexiGO:", { reply_markup: subscribeKeyboard(missingChannels) });
       return;
     }
 
@@ -133,15 +292,311 @@ export function createBot() {
   return bot;
 }
 
-async function isSubscribed(ctx) {
-  if (!config.channelId) return true;
-  try {
-    const member = await ctx.api.getChatMember(config.channelId, ctx.from.id);
-    return ["member", "administrator", "creator"].includes(member.status);
-  } catch (error) {
-    console.warn("Subscription check failed, allowing user:", error.message);
+async function guardAdmin(ctx) {
+  if (await isAdmin(ctx.from?.id)) return true;
+  if (ctx.callbackQuery) {
+    await ctx.answerCallbackQuery({ text: "Admin access only.", show_alert: true });
+  } else {
+    await ctx.reply("Admin access only.");
+  }
+  return false;
+}
+
+async function getMissingRequiredChannels(ctx) {
+  if (!(await getSubscriptionCheckEnabled())) return [];
+  const channels = await getRequiredSubscriptionChannels();
+  const missing = [];
+
+  for (const channel of channels) {
+    try {
+      const member = await ctx.api.getChatMember(channel.chatId, ctx.from.id);
+      if (!["member", "administrator", "creator"].includes(member.status)) {
+        missing.push(channel);
+      }
+    } catch (error) {
+      console.warn("Subscription check failed:", channel.chatId, error.message);
+      missing.push(channel);
+    }
+  }
+
+  return missing;
+}
+
+async function getRequiredSubscriptionChannels() {
+  const channels = await listRequiredChannels({ activeOnly: true });
+  if (channels.length) return channels;
+  if (!config.channelId) return [];
+  return [{
+    name: config.channelUsername || config.channelId,
+    chatId: config.channelId,
+    username: config.channelUsername || String(config.channelId).replace("@", "")
+  }];
+}
+
+async function handleAdminState(ctx, adminStates, broadcastDrafts) {
+  const state = adminStates.get(ctx.from?.id);
+  if (!state) return false;
+  if (!(await isAdmin(ctx.from.id))) {
+    adminStates.delete(ctx.from.id);
+    return false;
+  }
+
+  if (state.type === "broadcast_wait_content") {
+    broadcastDrafts.set(ctx.from.id, {
+      chatId: ctx.chat.id,
+      messageId: ctx.message.message_id
+    });
+    adminStates.delete(ctx.from.id);
+    const users = await getBroadcastUsers();
+    await ctx.reply(`📣 Broadcast draft saved.\n\nRecipients: ${users.length} active users.\nUse forwardMessage at a safe 20 msg/sec pace?`, {
+      reply_markup: broadcastConfirmKeyboard()
+    });
     return true;
   }
+
+  if (state.type === "admin_add_name") {
+    const name = ctx.message.text?.trim();
+    if (!name) {
+      await ctx.reply("Send the admin name as text.");
+      return true;
+    }
+    adminStates.set(ctx.from.id, { type: "admin_add_id", name });
+    await ctx.reply("Now send the admin Telegram ID.");
+    return true;
+  }
+
+  if (state.type === "admin_add_id") {
+    const telegramId = Number(ctx.message.text?.trim());
+    if (!telegramId) {
+      await ctx.reply("Telegram ID must be a number. Send it again.");
+      return true;
+    }
+    await addAdmin({ telegramId, name: state.name, addedBy: ctx.from.id });
+    adminStates.delete(ctx.from.id);
+    await ctx.reply(`✅ Admin added: ${escapeHtml(state.name)} (${telegramId})`, {
+      parse_mode: "HTML",
+      reply_markup: adminPanelKeyboard()
+    });
+    return true;
+  }
+
+  if (state.type === "channel_add_name") {
+    const name = ctx.message.text?.trim();
+    if (!name) {
+      await ctx.reply("Send the channel name as text.");
+      return true;
+    }
+    adminStates.set(ctx.from.id, { type: "channel_add_id", name });
+    await ctx.reply("Now send the channel username/link or numeric chat ID.\n\nExample: @my_channel or https://t.me/my_channel");
+    return true;
+  }
+
+  if (state.type === "channel_add_id") {
+    const chatId = ctx.message.text?.trim();
+    if (!chatId) {
+      await ctx.reply("Send a channel username/link or numeric chat ID.");
+      return true;
+    }
+    const channel = await addRequiredChannel({ name: state.name, chatId, addedBy: ctx.from.id });
+    adminStates.delete(ctx.from.id);
+    await ctx.reply(`✅ Channel added: ${escapeHtml(channel.name)} (${escapeHtml(channel.chatId)})`, {
+      parse_mode: "HTML",
+      reply_markup: adminPanelKeyboard()
+    });
+    return true;
+  }
+
+  return false;
+}
+
+async function showAdminsPanel(ctx) {
+  const admins = await listAdmins();
+  const lines = [
+    "👤 <b>Admins</b>",
+    "",
+    ...config.adminIds.map((id) => `🔒 ${id} <i>from .env</i>`),
+    ...admins.map((admin) => `• ${escapeHtml(admin.name)} — <code>${admin.telegramId}</code>`)
+  ];
+  if (lines.length === 2) lines.push("No database admins yet.");
+
+  await ctx.editMessageText(lines.join("\n"), {
+    parse_mode: "HTML",
+    reply_markup: adminsKeyboard(admins)
+  });
+}
+
+async function showChannelsPanel(ctx) {
+  const [enabled, channels] = await Promise.all([
+    getSubscriptionCheckEnabled(),
+    listRequiredChannels({ activeOnly: true })
+  ]);
+  const lines = [
+    "📢 <b>Required channels</b>",
+    "",
+    `Status: <b>${enabled ? "enabled" : "disabled"}</b>`,
+    ""
+  ];
+
+  if (channels.length) {
+    for (const channel of channels) {
+      lines.push(`• ${escapeHtml(channel.name)} — <code>${escapeHtml(channel.chatId)}</code>`);
+    }
+  } else if (config.channelId) {
+    lines.push(`Legacy .env channel: <code>${escapeHtml(config.channelId)}</code>`);
+  } else {
+    lines.push("No channels added yet.");
+  }
+
+  await ctx.editMessageText(lines.join("\n"), {
+    parse_mode: "HTML",
+    reply_markup: channelsKeyboard(channels, enabled)
+  });
+}
+
+async function formatAdminStats() {
+  const stats = await getAdminStats();
+  return [
+    "📊 <b>LexiGO stats</b>",
+    "",
+    `<b>Users</b>`,
+    `Active: <b>${stats.activeUsers}</b>`,
+    `Inactive/blocked: <b>${stats.inactiveUsers}</b>`,
+    `Total: <b>${stats.users}</b>`,
+    `New today: <b>${stats.newToday}</b>`,
+    "",
+    `<b>Vocabulary</b>`,
+    `Global dictionary words: <b>${stats.words}</b>`,
+    `Collections: <b>${stats.collections}</b>`,
+    `Saved study items: <b>${stats.studyItems}</b>`,
+    `Due now: <b>${stats.dueItems}</b>`,
+    `Mastered: <b>${stats.masteredItems}</b>`,
+    "",
+    `<b>Admin</b>`,
+    `Admins: <b>${stats.admins}</b>`,
+    `Required channels: <b>${stats.channels}</b>`,
+    `Subscription check: <b>${stats.subscriptionEnabled ? "on" : "off"}</b>`
+  ].join("\n");
+}
+
+async function runBroadcast(ctx, draft, statusMessageId) {
+  const users = await getBroadcastUsers();
+  const stats = { sent: 0, failed: 0, blocked: 0 };
+  const startedAt = Date.now();
+
+  for (const user of users) {
+    try {
+      await ctx.api.forwardMessage(user.telegramId, draft.chatId, draft.messageId);
+      stats.sent += 1;
+    } catch (error) {
+      const retryAfter = getRetryAfter(error);
+      if (retryAfter) {
+        await sleep((retryAfter + 1) * 1000);
+        try {
+          await ctx.api.forwardMessage(user.telegramId, draft.chatId, draft.messageId);
+          stats.sent += 1;
+        } catch (retryError) {
+          await handleBroadcastError(user.telegramId, retryError, stats);
+        }
+      } else {
+        await handleBroadcastError(user.telegramId, error, stats);
+      }
+    }
+
+    if ((stats.sent + stats.failed + stats.blocked) % 25 === 0) {
+      await editBroadcastStatus(ctx, statusMessageId, stats, users.length, startedAt, false);
+    }
+
+    await sleep(50);
+  }
+
+  await editBroadcastStatus(ctx, statusMessageId, stats, users.length, startedAt, true);
+}
+
+async function handleBroadcastError(telegramId, error, stats) {
+  const code = error.error_code || error.error?.error_code;
+  const description = String(error.description || error.error?.description || "");
+  if (code === 403 || /blocked|deactivated|forbidden/i.test(description)) {
+    await markUserActive(telegramId, false);
+    stats.blocked += 1;
+    return;
+  }
+  stats.failed += 1;
+}
+
+async function editBroadcastStatus(ctx, messageId, stats, total, startedAt, done) {
+  const elapsed = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
+  const text = [
+    done ? "✅ <b>Broadcast finished</b>" : "📣 <b>Broadcast sending...</b>",
+    "",
+    `Sent: <b>${stats.sent}</b> / ${total}`,
+    `Failed: <b>${stats.failed}</b>`,
+    `Blocked marked inactive: <b>${stats.blocked}</b>`,
+    `Elapsed: <b>${elapsed}s</b>`
+  ].join("\n");
+
+  try {
+    await ctx.api.editMessageText(ctx.chat.id, messageId, text, {
+      parse_mode: "HTML",
+      reply_markup: done ? adminBackKeyboard() : undefined
+    });
+  } catch {
+    // Status edits are nice-to-have; broadcast delivery should continue.
+  }
+}
+
+function getRetryAfter(error) {
+  return error.parameters?.retry_after || error.error?.parameters?.retry_after || 0;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function adminPanelKeyboard() {
+  return new InlineKeyboard()
+    .text("📊 Stat", "admin:stats")
+    .text("📣 Sending", "admin:sending")
+    .row()
+    .text("👤 Admins", "admin:admins")
+    .text("📢 Channels", "admin:channels");
+}
+
+function adminBackKeyboard() {
+  return new InlineKeyboard().text("⬅️ Admin panel", "admin:panel");
+}
+
+function adminCancelKeyboard() {
+  return new InlineKeyboard().text("Cancel", "admin:cancel");
+}
+
+function broadcastConfirmKeyboard() {
+  return new InlineKeyboard()
+    .text("✅ Send", "admin:broadcast:confirm")
+    .text("Cancel", "admin:broadcast:cancel");
+}
+
+function adminsKeyboard(admins) {
+  const keyboard = new InlineKeyboard().text("➕ Add admin", "admin:add_admin").row();
+  for (const admin of admins) {
+    if (!isBootstrapAdmin(admin.telegramId)) {
+      keyboard.text(`Remove ${admin.name}`, `admin:remove_admin:${admin.telegramId}`).row();
+    }
+  }
+  return keyboard.text("⬅️ Back", "admin:panel");
+}
+
+function channelsKeyboard(channels, enabled) {
+  const keyboard = new InlineKeyboard()
+    .text(enabled ? "Disable check" : "Enable check", "admin:toggle_channels")
+    .row()
+    .text("➕ Add channel", "admin:add_channel")
+    .row();
+
+  for (const channel of channels) {
+    keyboard.text(`Remove ${channel.name}`, `admin:remove_channel:${channel._id}`).row();
+  }
+
+  return keyboard.text("⬅️ Back", "admin:panel");
 }
 
 function escapeHtml(value) {
