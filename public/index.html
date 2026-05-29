@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LexiGO</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  </head>
+  <body>
+    <svg aria-hidden="true" class="icon-sprite">
+      <symbol id="i-home" viewBox="0 0 24 24">
+        <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9.5Z"></path>
+      </symbol>
+      <symbol id="i-stack" viewBox="0 0 24 24">
+        <path d="m8 6 9 2.2-1.6 9.8-9-2.2L8 6Z"></path>
+        <path d="M5 9.5 6.2 17l8.1 2"></path>
+      </symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24">
+        <path d="M5 19V5"></path>
+        <path d="M5 19h14"></path>
+        <path d="M9 16v-5"></path>
+        <path d="M13 16V8"></path>
+        <path d="M17 16v-9"></path>
+      </symbol>
+      <symbol id="i-play" viewBox="0 0 24 24">
+        <path fill="currentColor" stroke="none" d="M8 5v14l11-7L8 5Z"></path>
+      </symbol>
+      <symbol id="i-flame" viewBox="0 0 24 24">
+        <path d="M12 22a7 7 0 0 1-7-7c0-3.5 2.3-5.8 4.4-8.1.9 2.3 2.4 3.5 4.6 4.1-.2-2.8 1.1-5 3.2-6.9.7 3.3 1.8 5.3 2.5 7.4C21.5 16.9 18 22 12 22Z"></path>
+      </symbol>
+      <symbol id="i-book" viewBox="0 0 24 24">
+        <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H20v15H7.5A2.5 2.5 0 0 0 5 20.5v-15Z"></path>
+        <path d="M5 20.5A2.5 2.5 0 0 1 7.5 18H20"></path>
+      </symbol>
+      <symbol id="i-arrow-left" viewBox="0 0 24 24">
+        <path d="M15 6 9 12l6 6"></path>
+      </symbol>
+      <symbol id="i-list" viewBox="0 0 24 24">
+        <path d="M8 6h12"></path>
+        <path d="M8 12h12"></path>
+        <path d="M8 18h12"></path>
+        <path d="M4 6h.01"></path>
+        <path d="M4 12h.01"></path>
+        <path d="M4 18h.01"></path>
+      </symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24">
+        <path d="M4 7h16"></path>
+        <path d="M10 11v6"></path>
+        <path d="M14 11v6"></path>
+        <path d="M6 7l1 13h10l1-13"></path>
+        <path d="M9 7V4h6v3"></path>
+      </symbol>
+    </svg>
+    <main id="app" class="app-shell">
+      <section class="topbar">
+        <div>
+          <p class="brand-label">Lexi Go</p>
+          <h1>Today</h1>
+        </div>
+        <div class="status-badge" id="streakBox">
+          <svg class="icon" aria-hidden="true"><use href="#i-flame"></use></svg>
+          <span>0 day streak</span>
+        </div>
+      </section>
+
+      <section id="homeView" class="view active">
+        <div class="xp-card">
+          <div class="xp-line">
+            <span id="xpLabel">0 / 1000 XP</span>
+            <strong id="levelLabel">Level 1</strong>
+          </div>
+          <div class="meter"><span id="xpMeter"></span></div>
+        </div>
+
+        <section class="daily-tracker">
+          <div class="tracker-topline">
+            <p class="tracker-label">Daily goal</p>
+            <button id="allCollectionsSwitch" class="card-switch" type="button" aria-pressed="true">
+              <span>All</span>
+              <i></i>
+            </button>
+          </div>
+          <div class="tracker-main">
+            <strong id="trackerDueCount">0</strong>
+            <span id="trackerDueLabel">words ready for session</span>
+          </div>
+          <p id="trackerSummary" class="tracker-summary">0 reviews from 0 active collections.</p>
+          <div class="tracker-stats">
+            <span><i class="dot mastered-dot"></i>Mastered <strong id="trackerMastered">0</strong></span>
+            <span><i class="dot learning-dot"></i>Learning <strong id="trackerLearning">0</strong></span>
+            <span><i class="dot retention-dot"></i>Retention <strong id="trackerRetention">0%</strong></span>
+          </div>
+          <button id="startSessionBtn" class="primary-btn tracker-btn">
+            <svg class="icon" aria-hidden="true"><use href="#i-play"></use></svg>
+            <span>Start review</span>
+          </button>
+        </section>
+
+        <div id="collectionList" class="collection-list"></div>
+      </section>
+
+      <section id="groupsView" class="view">
+        <form id="newGroupForm" class="group-form">
+          <input id="groupNameInput" name="name" maxlength="40" placeholder="New collection" autocomplete="off">
+          <button type="submit">Create</button>
+        </form>
+        <div id="groupsList" class="collection-list"></div>
+      </section>
+
+      <section id="statsView" class="view stats-view">
+        <div class="stats-head">
+          <p class="brand-label">Progress</p>
+          <h1>Stats</h1>
+        </div>
+        <section class="stats-summary-card">
+          <div>
+            <span class="stat-label">Ready now</span>
+            <strong id="statsDue">0</strong>
+          </div>
+          <div>
+            <span class="stat-label">Mastered</span>
+            <strong id="statsMastered">0</strong>
+          </div>
+          <div>
+            <span class="stat-label">Learning</span>
+            <strong id="statsLearning">0</strong>
+          </div>
+          <div>
+            <span class="stat-label">Retention</span>
+            <strong id="statsRetention">0%</strong>
+          </div>
+        </section>
+        <section class="stats-detail-card">
+          <div class="xp-line">
+            <span id="statsXpLabel">0 / 1000 XP</span>
+            <strong id="statsLevelLabel">Level 1</strong>
+          </div>
+          <div class="meter"><span id="statsXpMeter"></span></div>
+          <p id="statsCollectionSummary" class="tracker-summary">0 words across 0 collections.</p>
+        </section>
+      </section>
+
+      <section id="wordsView" class="view words-view">
+        <button id="backToCollectionsBtn" class="back-btn">
+          <svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
+          <span>Collections</span>
+        </button>
+        <div class="words-head">
+          <p class="brand-label">Collection</p>
+          <h1 id="wordsTitle">Words</h1>
+        </div>
+        <div id="wordsList" class="words-list"></div>
+      </section>
+
+      <section id="practiceView" class="view practice-view">
+        <div class="session-head">
+          <span id="sessionTitle">Session</span>
+          <strong id="sessionXp">+0 XP</strong>
+        </div>
+        <div class="meter"><span id="sessionMeter"></span></div>
+
+        <article class="flashcard">
+          <div class="card-meta">
+            <span id="cardLevel" class="pill">B1</span>
+            <span id="cardState" class="subtle">learning</span>
+          </div>
+          <h2 id="cardWord">word</h2>
+          <p id="cardPronunciation" class="pronunciation"></p>
+
+          <div id="answerPanel" class="answer-panel" hidden>
+            <p id="cardDefinition" class="definition"></p>
+            <p id="cardExample" class="example"></p>
+            <p id="cardUzbek" class="uzbek"></p>
+            <p id="cardSynonyms" class="synonyms"></p>
+          </div>
+
+          <button id="showAnswerBtn" class="primary-btn reveal-btn">Show answer</button>
+          <div id="gradeGrid" class="grade-grid" hidden>
+            <button type="button" data-grade="again">Again</button>
+            <button type="button" data-grade="hard">Hard</button>
+            <button type="button" data-grade="good">Good</button>
+            <button type="button" data-grade="easy">Easy</button>
+          </div>
+        </article>
+      </section>
+
+      <section id="completeView" class="view complete-view">
+        <h2 id="completeXp">+0 XP</h2>
+        <p id="completeTitle">Session complete</p>
+        <div class="stats-row">
+          <div><strong id="reviewedCount">0</strong><span>reviewed</span></div>
+          <div><strong id="masteredCount">0</strong><span>mastered today</span></div>
+        </div>
+        <div class="meter wide"><span id="completeMeter"></span></div>
+        <button id="anotherGroupBtn" class="primary-btn">Review another collection</button>
+      </section>
+
+      <nav class="bottom-nav" aria-label="App navigation">
+        <button class="nav-btn active" type="button" data-target-view="homeView" data-nav-key="home">
+          <svg class="icon" aria-hidden="true"><use href="#i-home"></use></svg>
+          <span>Home</span>
+        </button>
+        <button class="nav-btn" type="button" data-target-view="groupsView" data-nav-key="groups">
+          <svg class="icon" aria-hidden="true"><use href="#i-stack"></use></svg>
+          <span>Collections</span>
+        </button>
+        <button class="nav-btn" type="button" data-target-view="statsView" data-nav-key="stats">
+          <svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg>
+          <span>Stats</span>
+        </button>
+      </nav>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html> 
