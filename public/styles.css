@@ -843,6 +843,63 @@ h1 {
   background: var(--surface-2);
 }
 
+.app-shell.external-only {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.app-shell.external-only .topbar,
+.app-shell.external-only .bottom-nav {
+  display: none;
+}
+
+.app-shell.external-only .view.active {
+  width: 100%;
+}
+
+.telegram-open-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 24px 18px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.telegram-open-card h1 {
+  margin-bottom: 12px;
+  font-size: 28px;
+}
+
+.telegram-open-card p:not(.brand-label) {
+  margin-bottom: 22px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.telegram-open-icon {
+  width: 52px;
+  height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--cyan);
+}
+
+.telegram-open-icon .icon {
+  width: 24px;
+  height: 24px;
+}
+
+.open-telegram-btn {
+  text-decoration: none;
+}
+
 .muted {
   color: var(--muted);
 }

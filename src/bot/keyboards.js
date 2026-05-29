@@ -43,13 +43,20 @@ export function subscribeKeyboard(channels = []) {
   const keyboard = new InlineKeyboard();
   const items = channels.length
     ? channels
-    : [{ name: "Channel", username: config.channelUsername }];
+    : [{ name: config.channelName, username: config.channelUsername }];
 
   for (const channel of items) {
     if (channel.username) {
-      keyboard.url(`📢 ${channel.name}`, `https://t.me/${channel.username.replace("@", "")}`).row();
+      keyboard.url(`📢 ${formatChannelLabel(channel)}`, `https://t.me/${channel.username.replace("@", "")}`).row();
     }
   }
 
   return keyboard.text("✅ I subscribed", "check_subscription");
+}
+
+function formatChannelLabel(channel) {
+  const username = channel.username?.replace("@", "");
+  const name = String(channel.name || "").trim();
+  if (name && name !== username && name !== `@${username}`) return name;
+  return "LexiGO Channel";
 }

@@ -54,6 +54,7 @@ Required `.env` values:
 
 ```bash
 BOT_TOKEN=
+BOT_USERNAME=LexiGoo_bot
 OPENAI_API_KEY=
 MONGODB_URI=mongodb://127.0.0.1:27017/lexigo
 WEBAPP_URL=https://your-domain-or-tunnel.example
@@ -73,6 +74,25 @@ Telegram WebApp Notes
 ---------------------
 
 Telegram WebApp buttons require an HTTPS `WEBAPP_URL`. For local bot testing, expose Fastify with an HTTPS tunnel such as ngrok or Cloudflare Tunnel, then put that HTTPS URL in `.env`.
+
+Bot Mode
+--------
+
+Polling for local development:
+
+```bash
+BOT_MODE=polling
+```
+
+Webhook for production/tunnel mode:
+
+```bash
+BOT_MODE=webhook
+WEBAPP_URL=https://your-domain.example
+WEBHOOK_SECRET=optional-stable-secret
+```
+
+When `BOT_MODE=webhook`, Fastify registers the grammY webhook route and the app calls Telegram `setWebhook` on startup. If `WEBHOOK_PATH` and `WEBHOOK_URL` are omitted, they are derived from `WEBAPP_URL` and `WEBHOOK_SECRET`.
 
 Important Files
 ---------------

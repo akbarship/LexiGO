@@ -1,4 +1,5 @@
 import { Collection, StudyItem } from "../models/index.js";
+import { config } from "../config.js";
 import { createCollection, listCollections } from "../services/collections.js";
 import { getDashboard, getSession, gradeItem } from "../services/srs.js";
 import { resolveWebUser } from "./auth.js";
@@ -6,11 +7,17 @@ import { resolveWebUser } from "./auth.js";
 export async function registerApiRoutes(app) {
   app.addHook("preHandler", async (request, reply) => {
     if (!request.url.startsWith("/api/")) return;
+    if (request.url.startsWith("/api/public-config")) return;
     request.user = await resolveWebUser(request);
     if (!request.user) {
       return reply.code(401).send({ error: "Telegram init data is missing or invalid." });
     }
   });
+
+  app.get("/api/public-config", async () => ({
+    botUsername: config.botUsername,
+    botLink: `https://t.me/${config.botUsername}`
+  }));
 
   app.get("/api/me", async (request) => {
     return getDashboard(request.user._id);

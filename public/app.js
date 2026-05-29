@@ -16,7 +16,12 @@ const state = {
 };
 
 const initData = tg?.initData || "";
-const devTelegramId = new URLSearchParams(location.search).get("telegramId") || "7853044770";
+const pageParams = new URLSearchParams(location.search);
+const devTelegramId = pageParams.get("telegramId");
+let publicConfig = {
+  botUsername: "LexiGoo_bot",
+  botLink: "https://t.me/LexiGoo_bot"
+};
 
 const els = {
   streakBox: document.querySelector("#streakBox span:last-child"),
@@ -106,12 +111,22 @@ els.newGroupForm.addEventListener("submit", async (event) => {
 });
 
 try {
-  await loadDashboard();
-  if (new URLSearchParams(location.search).get("view") === "groups") {
-    showView("groupsView");
+  publicConfig = await api("/api/public-config", { auth: false });
+} catch {
+  // The fallback above is enough for the external-open screen.
+}
+
+if (!initData && !devTelegramId) {
+  showOpenInTelegram();
+} else {
+  try {
+    await loadDashboard();
+    if (pageParams.get("view") === "groups") {
+      showView("groupsView");
+    }
+  } catch (error) {
+    showAppError(error);
   }
-} catch (error) {
-  showAppError(error);
 }
 
 async function loadDashboard() {
@@ -135,8 +150,28 @@ function showAppError(error) {
     <div class="error-state">
       <h2>Could not open LexiGO</h2>
       <p>${escapeHtml(error.message || "Something went wrong.")}</p>
-      <p class="muted">For tunnel testing outside Telegram, set <code>ALLOW_DEV_AUTH=true</code> and open the app with <code>?telegramId=7853044770</code>.</p>
+      <a class="primary-btn open-telegram-btn" href="${escapeAttr(publicConfig.botLink)}">
+        ${icon("send")}
+        <span>Open in Telegram</span>
+      </a>
     </div>
+  `;
+  showView("homeView");
+}
+
+function showOpenInTelegram() {
+  document.querySelector("#app").classList.add("external-only");
+  document.querySelector("#homeView").innerHTML = `
+    <section class="telegram-open-card">
+      <div class="telegram-open-icon">${icon("send")}</div>
+      <p class="brand-label">Lexi Go</p>
+      <h1>Open inside Telegram</h1>
+      <p>LexiGO works as a Telegram mini app. Open the bot and launch practice from there.</p>
+      <a class="primary-btn open-telegram-btn" href="${escapeAttr(publicConfig.botLink)}">
+        ${icon("send")}
+        <span>Open @${escapeHtml(publicConfig.botUsername)}</span>
+      </a>
+    </section>
   `;
   showView("homeView");
 }
@@ -519,9 +554,11 @@ async function api(path, options = {}) {
     headers["Content-Type"] = "application/json";
   }
 
-  if (initData) {
+  if (options.auth === false) {
+    // Public endpoint.
+  } else if (initData) {
     headers["x-telegram-init-data"] = initData;
-  } else {
+  } else if (devTelegramId) {
     headers["x-dev-telegram-id"] = devTelegramId;
   }
 

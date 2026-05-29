@@ -238,6 +238,10 @@ export function createBot() {
 
   bot.callbackQuery("keep_exploring", async (ctx) => {
     await ctx.answerCallbackQuery();
+    await deleteCurrentMessage(ctx);
+    await sendCleanMenu(ctx, menuMessages, "🔎 Send another English word and I’ll define it for you.", {
+      reply_markup: mainMenuKeyboard()
+    });
   });
 
   bot.on("message", async (ctx, next) => {
@@ -327,7 +331,7 @@ async function getRequiredSubscriptionChannels() {
   if (channels.length) return channels;
   if (!config.channelId) return [];
   return [{
-    name: config.channelUsername || config.channelId,
+    name: config.channelName,
     chatId: config.channelId,
     username: config.channelUsername || String(config.channelId).replace("@", "")
   }];
