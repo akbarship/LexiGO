@@ -352,7 +352,7 @@ async function handleAdminState(ctx, adminStates, broadcastDrafts) {
     });
     adminStates.delete(ctx.from.id);
     const users = await getBroadcastUsers();
-    await ctx.reply(`📣 Broadcast draft saved.\n\nRecipients: ${users.length} active users.\nUse forwardMessage at a safe 20 msg/sec pace?`, {
+    await ctx.reply(`📣 Broadcast draft saved.\n\nRecipients: ${users.length} active users.\nUse copyMessage at a safe 20 msg/sec pace?`, {
       reply_markup: broadcastConfirmKeyboard()
     });
     return true;
@@ -489,14 +489,14 @@ async function runBroadcast(ctx, draft, statusMessageId) {
 
   for (const user of users) {
     try {
-      await ctx.api.forwardMessage(user.telegramId, draft.chatId, draft.messageId);
+      await ctx.api.copyMessage(user.telegramId, draft.chatId, draft.messageId);
       stats.sent += 1;
     } catch (error) {
       const retryAfter = getRetryAfter(error);
       if (retryAfter) {
         await sleep((retryAfter + 1) * 1000);
         try {
-          await ctx.api.forwardMessage(user.telegramId, draft.chatId, draft.messageId);
+          await ctx.api.copyMessage(user.telegramId, draft.chatId, draft.messageId);
           stats.sent += 1;
         } catch (retryError) {
           await handleBroadcastError(user.telegramId, retryError, stats);

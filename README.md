@@ -37,7 +37,7 @@ ADMIN_IDS=123456789,987654321
 The admin panel has four bot-only sections:
 
 - `Stat`: active/inactive users, global dictionary size, collections, due/mastered study items, admins, and channel-check status.
-- `Sending`: forward any admin message/media to active users with conservative Telegram flood-limit pacing.
+- `Sending`: copy any admin message/media to active users with conservative Telegram flood-limit pacing.
 - `Admins`: add admins by name and Telegram ID, or remove database-added admins.
 - `Channels`: add/remove required channels and enable/disable subscription checking.
 
